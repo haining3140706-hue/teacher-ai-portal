@@ -3,24 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI教学平台 - 智慧教学知识库</title>
+  <title>AI教学平台 - AI教学知识库平台</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    h1, h2, h3, h4 { font-family: 'Noto Sans SC', 'Inter', sans-serif; letter-spacing: -0.02em; }
+    .font-mono { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .animate-spin { animation: spin 1s linear infinite; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .animate-in { animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-up { animation: slideUp 0.4s ease-out; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .chat-bubble { position: relative; }
+    .chat-bubble::after { content: ''; position: absolute; bottom: -6px; left: 20px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid white; }
+    .chat-bubble-self::after { left: auto; right: 20px; }
+    .num-display { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+    h2 { font-family: 'Noto Sans SC', 'Inter', sans-serif !important; letter-spacing: -0.02em; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-const { useState } = React;
+const { useState, useEffect, useRef } = React;
 
 // --- SVG Icons ---
 const BookOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
@@ -42,6 +61,19 @@ const Database = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height
 const Sparkles = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>;
 const Loader2 = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
 const Wand2 = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>;
+const Users = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const GraduationCap = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
+const Settings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+const MessageCircle = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>;
+const X = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+const ChevronLeft = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>;
+const Eye = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
+const Download = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>;
+const Clock = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const TrendingUp = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
+const Star = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const Filter = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+const ArrowLeft = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>;
 
 // --- Mock Data ---
 const masteryData = [
@@ -63,10 +95,44 @@ const activityData = [
 ];
 
 const resourceLibrary = [
-  { id: 1, type: 'case', title: '超售情况下的VIP客人安抚策略', tags: ['前厅管理', '高难度', '真实案例'] },
-  { id: 2, type: 'video', title: '标准中式宴会摆台示范教学视频', tags: ['餐饮服务', '实操示范'] },
-  { id: 3, type: 'quiz', title: '客房布草污染赔偿标准随堂测验', tags: ['客房管理', '单选题', '10题'] },
-  { id: 4, type: 'case', title: '外籍客人突发疾病应急处理', tags: ['突发事件', '跨部门协作'] },
+  { id: 1, type: 'case', title: '超售情况下的VIP客人安抚策略', tags: ['前厅管理', '高难度', '真实案例'], desc: '详细分析超售场景下的客户安抚话术与补偿方案，含3个真实酒店案例复盘。', downloads: 128, rating: 4.8 },
+  { id: 2, type: 'video', title: '标准中式宴会摆台示范教学视频', tags: ['餐饮服务', '实操示范'], desc: '20分钟高清教学视频，涵盖10人圆台标准摆台全流程演示。', downloads: 256, rating: 4.9 },
+  { id: 3, type: 'quiz', title: '客房布草污染赔偿标准随堂测验', tags: ['客房管理', '单选题', '10题'], desc: '10道精选单选题，覆盖各类布草污染场景的赔偿标准。', downloads: 89, rating: 4.5 },
+  { id: 4, type: 'case', title: '外籍客人突发疾病应急处理', tags: ['突发事件', '跨部门协作'], desc: '真实案例：外籍客人突发心脏病，前台与医务室协同处置全流程。', downloads: 167, rating: 4.7 },
+  { id: 5, type: 'doc', title: '前厅接待服务标准操作流程(SOP)', tags: ['前厅管理', '教材语料', 'SOP'], desc: '完整的入住/退房/换房SOP文档，含流程图与话术模板。', downloads: 312, rating: 4.9 },
+  { id: 6, type: 'quiz', title: '跨文化沟通情景题库(含AI评分规则)', tags: ['情景题', '高难度', 'AI评分'], desc: '15道情景题，涵盖日韩/欧美/中东客人沟通场景，支持AI自动评分。', downloads: 95, rating: 4.6 },
+];
+
+const courseList = [
+  { id: 1, name: '前厅接待与服务管理', code: 'HTM-301', classes: ['24级酒管1班', '24级酒管2班'], students: 87, progress: 68, status: 'active' },
+  { id: 2, name: '客房运营与管理实务', code: 'HTM-302', classes: ['24级酒管1班'], students: 45, progress: 45, status: 'active' },
+  { id: 3, name: '餐饮服务技能实训', code: 'HTM-303', classes: ['24级酒管2班', '23级酒管1班'], students: 92, progress: 82, status: 'active' },
+  { id: 4, name: '酒店英语口语', code: 'HTM-201', classes: ['24级酒管1班', '24级酒管2班'], students: 87, progress: 100, status: 'completed' },
+];
+
+const studentList = [
+  { id: 1, name: '张三', class: '24级酒管1班', avgScore: 72, trend: 'down', risk: true, avatar: '张' },
+  { id: 2, name: '李四', class: '24级酒管1班', avgScore: 68, trend: 'down', risk: true, avatar: '李' },
+  { id: 3, name: '王五', class: '24级酒管1班', avgScore: 85, trend: 'up', risk: false, avatar: '王' },
+  { id: 4, name: '赵六', class: '24级酒管2班', avgScore: 91, trend: 'up', risk: false, avatar: '赵' },
+  { id: 5, name: '陈七', class: '24级酒管2班', avgScore: 78, trend: 'stable', risk: false, avatar: '陈' },
+  { id: 6, name: '孙八', class: '24级酒管1班', avgScore: 58, trend: 'down', risk: true, avatar: '孙' },
+  { id: 7, name: '周九', class: '24级酒管2班', avgScore: 83, trend: 'up', risk: false, avatar: '周' },
+  { id: 8, name: '吴十', class: '24级酒管1班', avgScore: 76, trend: 'stable', risk: false, avatar: '吴' },
+];
+
+const notifications = [
+  { id: 1, type: 'warning', title: '学情预警', desc: '24级酒管1班「客诉处理」模块平均分低于预期', time: '10分钟前', read: false },
+  { id: 2, type: 'success', title: '任务已发布', desc: '「第三章随堂测验」已成功分发至2个班级', time: '1小时前', read: false },
+  { id: 3, type: 'info', title: 'AI课件生成完成', desc: '「酒店前台客诉处理技巧」课件已保存', time: '2小时前', read: true },
+  { id: 4, type: 'warning', title: '待批阅提醒', desc: '还有28份主观题待批阅', time: '3小时前', read: true },
+];
+
+const aiChatPresets = [
+  { label: '📊 生成学情报告', prompt: '请为24级酒管1班生成本周学情分析报告' },
+  { label: '💡 推荐教学案例', prompt: '请推荐客诉处理相关的教学案例' },
+  { label: '📝 设计随堂测验', prompt: '请设计10道餐饮摆台规范的单选题' },
+  { label: '🎯 制定补救方案', prompt: '请为低分学生制定个性化补救方案' },
 ];
 
 // --- SVG Charts ---
@@ -75,27 +141,22 @@ function RadarChart({ data, width, height }) {
   const maxRadius = Math.min(cx, cy) * 0.8;
   const angleStep = (2 * Math.PI) / data.length;
   const startAngle = -Math.PI / 2;
-
+  
   const getPoint = (i, value, max) => {
     const angle = startAngle + i * angleStep;
     const r = (value / max) * maxRadius;
-    return {
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle)
-    };
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
   };
 
   const points = data.map((d, i) => getPoint(i, d.score, 100));
   const polygonPoints = points.map(p => `${p.x},${p.y}`).join(' ');
   const gridLevels = [20, 40, 60, 80, 100];
-
+  
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{maxWidth: width, maxHeight: height}}>
       {gridLevels.map(level => {
         const r = (level / 100) * maxRadius;
-        return (
-          <circle key={level} cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth="1" />
-        );
+        return <circle key={level} cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth="1" />;
       })}
       {data.map((d, i) => {
         const p = getPoint(i, 100, 100);
@@ -125,11 +186,10 @@ function BarChartSVG({ data, width, height }) {
   const barGroupWidth = chartWidth / data.length;
   const barWidth = barGroupWidth * 0.35;
   const gap = barGroupWidth * 0.1;
-
   const scaleY = (value) => (value / maxValue) * chartHeight;
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{maxWidth: width, maxHeight: height}}>
       {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
         <line key={i} x1={padding.left} y1={padding.top + chartHeight * (1 - ratio)} x2={padding.left + chartWidth} y2={padding.top + chartHeight * (1 - ratio)} stroke="#e2e8f0" strokeWidth="1" />
       ))}
@@ -137,9 +197,11 @@ function BarChartSVG({ data, width, height }) {
       <line x1={padding.left} y1={padding.top + chartHeight} x2={padding.left + chartWidth} y2={padding.top + chartHeight} stroke="#e2e8f0" strokeWidth="1" />
       {data.map((d, i) => {
         const x1 = padding.left + i * barGroupWidth + gap;
+        const x2 = x1 + barWidth;
         const y1 = padding.top + chartHeight - scaleY(d.活跃度);
         const barHeight = scaleY(d.活跃度);
-        const x3 = x1 + barWidth + gap;
+        const x3 = x2 + gap;
+        const x4 = x3 + barWidth;
         const y2 = padding.top + chartHeight - scaleY(d.提交量);
         const barHeight2 = scaleY(d.提交量);
         return (
@@ -150,57 +212,75 @@ function BarChartSVG({ data, width, height }) {
         );
       })}
       {data.map((d, i) => (
-        <text key={i} x={padding.left + i * barGroupWidth + barGroupWidth / 2} y={padding.top + chartHeight + 20} textAnchor="middle" fill="#64748b" fontSize="12" fontFamily="sans-serif">
-          {d.name}
-        </text>
+        <text key={i} x={padding.left + i * barGroupWidth + barGroupWidth / 2} y={padding.top + chartHeight + 20} textAnchor="middle" fill="#64748b" fontSize="12" fontFamily="sans-serif">{d.name}</text>
       ))}
       {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-        <text key={i} x={padding.left - 8} y={padding.top + chartHeight * (1 - ratio) + 4} textAnchor="end" fill="#64748b" fontSize="11" fontFamily="sans-serif">
-          {Math.round(maxValue * ratio)}
-        </text>
+        <text key={i} x={padding.left - 8} y={padding.top + chartHeight * (1 - ratio) + 4} textAnchor="end" fill="#64748b" fontSize="11" fontFamily="sans-serif">{Math.round(maxValue * ratio)}</text>
       ))}
     </svg>
   );
 }
 
-// --- Components ---
-
+// --- Main App ---
 function TeacherPortal() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [selectedResource, setSelectedResource] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardView onNavigate={setActiveTab} />;
-      case 'knowledge': return <KnowledgeBaseView />;
+      case 'knowledge': return <KnowledgeBaseView onSelectResource={setSelectedResource} />;
       case 'preparation': return <PreparationView />;
       case 'distribution': return <DistributionView />;
-      case 'analytics': return <AnalyticsView />;
+      case 'analytics': return <AnalyticsView onNavigate={setActiveTab} />;
+      case 'courses': return <CourseManageView onSelectCourse={setSelectedCourse} />;
+      case 'students': return <StudentManageView onSelectStudent={setSelectedStudent} />;
+      case 'settings': return <SettingsView />;
       default: return <DashboardView onNavigate={setActiveTab} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-800" style={{fontFamily: "'Inter', 'Noto Sans SC', sans-serif"}}>
+      {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-10">
-        <div className="p-6 flex items-center space-x-3 mb-6 border-b border-slate-700">
+        <div className="p-6 flex items-center space-x-3 mb-4 border-b border-slate-700">
           <div className="bg-blue-500 p-2 rounded-lg">
             <BrainCircuit className="text-white w-6 h-6" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-white tracking-wide">AI教学平台</h1>
-            <p className="text-[10px] text-slate-400">智慧教学知识库</p>
+            <p className="text-[10px] text-slate-400 tracking-wider" style={{fontFamily: "'Inter', sans-serif"}}>AI教学知识库平台</p>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-1.5 overflow-auto">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider px-4 py-2 font-bold">核心功能</div>
           <NavItem icon={<LayoutDashboard />} label="工作台总览" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<Database />} label="专业知识库" isActive={activeTab === 'knowledge'} onClick={() => setActiveTab('knowledge')} />
           <NavItem icon={<Sparkles />} label="AI备课中心" isActive={activeTab === 'preparation'} onClick={() => setActiveTab('preparation')} />
           <NavItem icon={<Send />} label="任务分发引擎" isActive={activeTab === 'distribution'} onClick={() => setActiveTab('distribution')} />
           <NavItem icon={<BarChart2 />} label="全息学情分析" isActive={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider px-4 py-2 mt-4 font-bold">教学管理</div>
+          <NavItem icon={<GraduationCap />} label="课程管理" isActive={activeTab === 'courses'} onClick={() => setActiveTab('courses')} />
+          <NavItem icon={<Users />} label="学生管理" isActive={activeTab === 'students'} onClick={() => setActiveTab('students')} />
+          <NavItem icon={<Settings />} label="系统设置" isActive={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </nav>
 
-        <div className="p-4 m-4 bg-slate-800 rounded-xl border border-slate-700">
+        {/* AI Chat Entry */}
+        <div className="px-4 pb-2">
+          <button onClick={() => setShowAIChat(true)} className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-xl text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg cursor-pointer">
+            <MessageCircle className="w-4 h-4" />
+            <span>AI教学助手</span>
+          </button>
+        </div>
+
+        <div className="p-4 m-4 mt-2 bg-slate-800 rounded-xl border border-slate-700">
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold">李</div>
             <div>
@@ -211,30 +291,371 @@ function TeacherPortal() {
         </div>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative">
           <div className="flex items-center bg-slate-100 rounded-full px-4 py-2 w-96">
             <Search />
             <input type="text" placeholder="搜索课程、案例、学情报告..." className="bg-transparent border-none outline-none text-sm w-full ml-2" />
           </div>
           <div className="flex items-center space-x-6">
-            <button className="text-slate-500 hover:text-blue-600 relative">
-              <Bell />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <button onClick={() => setShowAIChat(true)} className="text-slate-500 hover:text-purple-600 cursor-pointer" title="AI教学助手">
+              <MessageCircle />
             </button>
-            <div className="flex items-center space-x-2 cursor-pointer">
+            <div className="relative">
+              <button onClick={() => setShowNotifications(!showNotifications)} className="text-slate-500 hover:text-blue-600 relative cursor-pointer">
+                <Bell />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full pulse-dot"></span>
+              </button>
+              {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} onNavigate={setActiveTab} />}
+            </div>
+            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setActiveTab('settings')}>
               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
                 <User />
               </div>
-              <span className="text-sm font-medium">李教授,上午好</span>
+              <span className="text-sm font-medium">李教授，上午好</span>
             </div>
           </div>
         </header>
 
+        {/* Dynamic Content Area */}
         <div className="flex-1 overflow-auto p-8">
           {renderContent()}
         </div>
       </main>
+
+      {/* AI Chat Panel */}
+      {showAIChat && <AIChatPanel onClose={() => setShowAIChat(false)} onNavigate={setActiveTab} />}
+
+      {/* Resource Detail Modal */}
+      {selectedResource && <ResourceDetailModal resource={selectedResource} onClose={() => setSelectedResource(null)} onNavigate={setActiveTab} />}
+
+      {/* Course Detail Modal */}
+      {selectedCourse && <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} onNavigate={setActiveTab} />}
+
+      {/* Student Detail Modal */}
+      {selectedStudent && <StudentDetailModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />}
+    </div>
+  );
+}
+
+// --- Notification Panel ---
+function NotificationPanel({ onClose, onNavigate }) {
+  return (
+    <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 slide-up">
+      <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 className="font-bold text-slate-800">通知中心</h3>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X /></button>
+      </div>
+      <div className="max-h-80 overflow-auto scrollbar-thin">
+        {notifications.map(n => (
+          <div key={n.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${!n.read ? 'bg-blue-50/50' : ''}`} onClick={() => {
+            if (n.type === 'warning' && n.title === '学情预警') onNavigate('analytics');
+            if (n.title === '待批阅提醒') onNavigate('distribution');
+            onClose();
+          }}>
+            <div className="flex items-start">
+              <div className={`w-2 h-2 rounded-full mt-2 mr-3 shrink-0 ${n.type === 'warning' ? 'bg-orange-500' : n.type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  <p className="text-sm font-semibold text-slate-800">{n.title}</p>
+                  <span className="text-[10px] text-slate-400 ml-2 shrink-0">{n.time}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">{n.desc}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-3 text-center border-t border-slate-100">
+        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer" onClick={() => { onClose(); }}>查看全部通知</button>
+      </div>
+    </div>
+  );
+}
+
+// --- AI Chat Panel ---
+function AIChatPanel({ onClose, onNavigate }) {
+  const [messages, setMessages] = useState([
+    { role: 'ai', content: '您好！我是AI教学助手，可以帮您生成课件、分析学情、推荐案例、设计测验等。请问有什么可以帮您的？' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = (text) => {
+    const msg = text || input;
+    if (!msg.trim()) return;
+    setMessages(prev => [...prev, { role: 'user', content: msg }]);
+    setInput('');
+    setIsTyping(true);
+    setTimeout(() => {
+      let reply = '';
+      if (msg.includes('学情') || msg.includes('报告')) {
+        reply = '📊 已为您生成24级酒管1班本周学情报告概要：\n\n• 平均分：76.5分（较上周↑2.3）\n• 薄弱模块：客诉突发处理（62分）\n• 预警学生：5人\n• 建议：强化客诉处理专项训练\n\n是否跳转至详细学情分析页面？';
+      } else if (msg.includes('案例') || msg.includes('推荐')) {
+        reply = '💡 为您推荐以下教学案例：\n\n1. 超售情况下的VIP客人安抚策略\n2. 外籍客人突发疾病应急处理\n3. 团队入住信息错误快速处理\n\n这些案例已加入知识库，可直接用于备课。是否跳转至知识库查看？';
+      } else if (msg.includes('测验') || msg.includes('题目') || msg.includes('出题')) {
+        reply = '📝 已为您设计10道餐饮摆台规范单选题，涵盖：\n\n• 餐具摆放顺序（3题）\n• 餐巾折叠规范（2题）\n• 酒具摆放标准（3题）\n• 特殊场合摆台（2题）\n\n已保存至AI备课中心，是否跳转查看？';
+      } else if (msg.includes('补救') || msg.includes('方案')) {
+        reply = '🎯 已为低分学生制定个性化补救方案：\n\n• 张三（72分）：推荐客诉处理案例+3道专项练习\n• 李四（68分）：推荐基础概念解析+情景模拟训练\n• 孙八（58分）：推荐全模块回顾+1对1AI辅导\n\n是否一键分发补救任务？';
+      } else {
+        reply = '收到您的需求，我可以帮您：\n\n1. 📊 生成学情分析报告\n2. 💡 推荐教学案例\n3. 📝 设计随堂测验\n4. 🎯 制定个性化补救方案\n5. 📖 生成课程课件\n\n请告诉我您需要什么帮助？';
+      }
+      setMessages(prev => [...prev, { role: 'ai', content: reply }]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex justify-end" onClick={onClose}>
+      <div className="w-[420px] h-full bg-white shadow-2xl flex flex-col slide-up" onClick={e => e.stopPropagation()}>
+        <div className="p-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex justify-between items-center shrink-0">
+          <div className="flex items-center space-x-3">
+            <BrainCircuit className="w-6 h-6" />
+            <div>
+              <h3 className="font-bold">AI教学助手</h3>
+              <p className="text-xs text-blue-100">随时为您智能服务</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white cursor-pointer"><X /></button>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="p-3 border-b border-slate-100 bg-slate-50 shrink-0">
+          <div className="flex flex-wrap gap-2">
+            {aiChatPresets.map((preset, i) => (
+              <button key={i} onClick={() => handleSend(preset.prompt)} className="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-full hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all cursor-pointer">
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-auto p-4 space-y-4 scrollbar-thin">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-md' : 'bg-slate-100 text-slate-800 rounded-bl-md'}`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="bg-slate-100 p-3 rounded-2xl rounded-bl-md">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="p-4 border-t border-slate-100 shrink-0">
+          <div className="flex items-center space-x-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="输入您的需求..."
+              className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button onClick={() => handleSend()} className="bg-blue-600 text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors cursor-pointer">
+              <Send />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Resource Detail Modal ---
+function ResourceDetailModal({ resource, onClose, onNavigate }) {
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="w-[600px] bg-white rounded-2xl shadow-2xl slide-up" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-slate-100 flex justify-between items-start">
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-slate-50 rounded-xl">
+              {resource.type === 'case' && <FileText className="w-8 h-8 text-orange-500" />}
+              {resource.type === 'video' && <Video className="w-8 h-8 text-blue-500" />}
+              {resource.type === 'quiz' && <MessageSquare className="w-8 h-8 text-green-500" />}
+              {resource.type === 'doc' && <BookOpen className="w-8 h-8 text-purple-500" />}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">{resource.title}</h2>
+              <div className="flex items-center space-x-3 mt-2 text-sm text-slate-500">
+                <span className="flex items-center"><Star className="w-3.5 h-3.5 text-yellow-500 mr-1" />{resource.rating}</span>
+                <span className="flex items-center"><Download className="w-3.5 h-3.5 mr-1" />{resource.downloads}次下载</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"><X /></button>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-slate-600 leading-relaxed mb-4">{resource.desc}</p>
+          <div className="flex flex-wrap gap-2 mb-6">
+            {resource.tags.map(tag => (
+              <span key={tag} className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-600 text-xs rounded-full">{tag}</span>
+            ))}
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6">
+            <h4 className="text-sm font-semibold text-slate-700 mb-2">资源预览</h4>
+            <div className="h-32 bg-white rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 text-sm">
+              {resource.type === 'video' ? '🎬 视频播放器预览区域' : resource.type === 'quiz' ? '📝 题目列表预览区域' : '📄 文档内容预览区域'}
+            </div>
+          </div>
+          <div className="flex space-x-3">
+            <button onClick={() => { onClose(); onNavigate('preparation'); }} className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center justify-center cursor-pointer">
+              <Sparkles className="w-4 h-4 mr-2" /> 用于AI备课
+            </button>
+            <button onClick={() => { onClose(); onNavigate('distribution'); }} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center justify-center cursor-pointer">
+              <Send className="w-4 h-4 mr-2" /> 分发给学生
+            </button>
+            <button className="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center justify-center cursor-pointer">
+              <Download className="w-4 h-4 mr-2" /> 下载
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Course Detail Modal ---
+function CourseDetailModal({ course, onClose, onNavigate }) {
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="w-[600px] bg-white rounded-2xl shadow-2xl slide-up max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-slate-100 flex justify-between items-start">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">{course.name}</h2>
+            <p className="text-sm text-slate-500 mt-1">课程编号：{course.code}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"><X /></button>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-blue-50 p-4 rounded-xl text-center">
+              <p className="text-2xl font-bold text-blue-600">{course.students}</p>
+              <p className="text-xs text-slate-500 mt-1">在读学生</p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-xl text-center">
+              <p className="text-2xl font-bold text-purple-600">{course.classes.length}</p>
+              <p className="text-xs text-slate-500 mt-1">关联班级</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-xl text-center">
+              <p className="text-2xl font-bold text-green-600">{course.progress}%</p>
+              <p className="text-xs text-slate-500 mt-1">教学进度</p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-3">关联班级</h4>
+            <div className="space-y-2">
+              {course.classes.map((cls, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <span className="text-sm font-medium text-slate-700">{cls}</span>
+                  <span className="text-xs text-slate-400 flex items-center"><Users className="w-3.5 h-3.5 mr-1" />{Math.floor(course.students / course.classes.length)}人</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-3">教学进度</h4>
+            <div className="w-full bg-slate-200 rounded-full h-3">
+              <div className="bg-blue-600 h-3 rounded-full transition-all" style={{ width: `${course.progress}%` }}></div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">已完成 {course.progress}% 的教学计划</p>
+          </div>
+
+          <div className="flex space-x-3">
+            <button onClick={() => { onClose(); onNavigate('preparation'); }} className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center justify-center cursor-pointer">
+              <Sparkles className="w-4 h-4 mr-2" /> AI备课
+            </button>
+            <button onClick={() => { onClose(); onNavigate('analytics'); }} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center justify-center cursor-pointer">
+              <BarChart2 className="w-4 h-4 mr-2" /> 查看学情
+            </button>
+            <button onClick={() => { onClose(); onNavigate('distribution'); }} className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center justify-center cursor-pointer">
+              <Send className="w-4 h-4 mr-2" /> 分发任务
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Student Detail Modal ---
+function StudentDetailModal({ student, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="w-[500px] bg-white rounded-2xl shadow-2xl slide-up" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-slate-100 flex justify-between items-start">
+          <div className="flex items-center space-x-4">
+            <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold">{student.avatar}</div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">{student.name}</h2>
+              <p className="text-sm text-slate-500">{student.class}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"><X /></button>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-50 p-4 rounded-xl">
+              <p className="text-xs text-slate-500">平均分</p>
+              <p className="text-2xl font-bold text-blue-600">{student.avgScore}</p>
+            </div>
+            <div className={`p-4 rounded-xl ${student.trend === 'up' ? 'bg-green-50' : student.trend === 'down' ? 'bg-red-50' : 'bg-slate-50'}`}>
+              <p className="text-xs text-slate-500">成绩趋势</p>
+              <p className={`text-2xl font-bold ${student.trend === 'up' ? 'text-green-600' : student.trend === 'down' ? 'text-red-600' : 'text-slate-600'}`}>
+                {student.trend === 'up' ? '↑ 上升' : student.trend === 'down' ? '↓ 下降' : '→ 稳定'}
+              </p>
+            </div>
+          </div>
+
+          {student.risk && (
+            <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
+              <div className="flex items-start">
+                <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">学情预警</p>
+                  <p className="text-xs text-red-600 mt-1">该学生连续两次考核低于达标线，建议启动个性化补救方案。</p>
+                  <button className="mt-2 text-xs bg-red-100 text-red-700 border border-red-300 px-3 py-1 rounded hover:bg-red-200 cursor-pointer">生成补救方案</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-3">各模块成绩</h4>
+            <div className="space-y-2">
+              {masteryData.map((item, i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <span className="text-xs text-slate-500 w-20 shrink-0">{item.subject}</span>
+                  <div className="flex-1 bg-slate-100 rounded-full h-2">
+                    <div className={`h-2 rounded-full ${item.score >= 80 ? 'bg-green-500' : item.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${student.risk ? Math.max(item.score - 15 + Math.floor(Math.random()*10), 30) : item.score}%` }}></div>
+                  </div>
+                  <span className="text-xs text-slate-500 w-8 text-right">{student.risk ? Math.max(item.score - 15 + Math.floor(Math.random()*10), 30) : item.score}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -245,15 +666,17 @@ function DashboardView({ onNavigate }) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-800">工作台总览</h2>
-
-      {/* Quick Stats - 已移除 AI角色训练完成率,改为 3 列 */}
-      <div className="grid grid-cols-3 gap-6">
+      
+      {/* Quick Stats */}
+      <div className="grid grid-cols-4 gap-6">
         <StatCard title="授课班级" value="4" suffix="个" icon={<BookOpen />} color="bg-blue-50 text-blue-600" />
-        <StatCard title="待批阅主观题" value="28" suffix="份" icon={<FileText />} color="bg-orange-50 text-orange-600" />
+        <StatCard title="授课学生人数" value="264" suffix="人" icon={<Users />} color="bg-green-50 text-green-600" />
+        <StatCard title="知识库资源数" value="156" suffix="份" icon={<Database />} color="bg-purple-50 text-purple-600" />
         <StatCard title="本周高频预警点" value="客诉处理" suffix="" icon={<AlertCircle />} color="bg-red-50 text-red-600" />
       </div>
 
       <div className="grid grid-cols-3 gap-6">
+        {/* AI Insight Shortcut */}
         <div className="col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold flex items-center"><BrainCircuit className="w-5 h-5 mr-2 text-purple-500" /> AI教学助手建议</h3>
@@ -264,19 +687,77 @@ function DashboardView({ onNavigate }) {
               <AlertCircle className="w-5 h-5 text-purple-600 mr-3 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-slate-800">24级酒管1班在「客诉突发处理」模块平均分低于预期 (62分)。</p>
-                <p className="text-xs text-slate-500 mt-1">AI建议:已为您智能推荐 3 个相关真实案例和 1 套针对性专项练习,是否一键分发?</p>
-                <button onClick={() => onNavigate('distribution')} className="mt-3 text-xs bg-purple-600 text-white px-4 py-1.5 rounded-full hover:bg-purple-700 transition-colors cursor-pointer">一键生成并分发强化任务</button>
+                <p className="text-xs text-slate-500 mt-1">AI建议：已为您智能推荐 3 个相关真实案例和 1 套针对性专项练习，是否一键分发？</p>
+                <div className="flex space-x-3 mt-3">
+                  <button onClick={() => onNavigate('distribution')} className="text-xs bg-purple-600 text-white px-4 py-1.5 rounded-full hover:bg-purple-700 transition-colors cursor-pointer">一键生成并分发强化任务</button>
+                  <button onClick={() => onNavigate('preparation')} className="text-xs bg-white border border-purple-300 text-purple-600 px-4 py-1.5 rounded-full hover:bg-purple-50 transition-colors cursor-pointer">AI生成针对性课件</button>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg flex items-start">
+              <TrendingUp className="w-5 h-5 text-blue-600 mr-3 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-slate-800">24级酒管2班本周学习活跃度较上周提升18%，「餐饮摆台规范」模块进步显著。</p>
+                <p className="text-xs text-slate-500 mt-1">建议：可适当增加进阶实操内容，保持学习热情。</p>
+                <button onClick={() => onNavigate('analytics')} className="mt-3 text-xs bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-700 transition-colors cursor-pointer">查看详细学情</button>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Quick Actions */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <h3 className="text-lg font-semibold mb-4">快捷入口</h3>
           <div className="space-y-3">
             <QuickActionBtn icon={<Sparkles />} label="AI生成新课件" onClick={() => onNavigate('preparation')} />
             <QuickActionBtn icon={<Database />} label="上传教学案例至知识库" onClick={() => onNavigate('knowledge')} />
             <QuickActionBtn icon={<Send />} label="发布新练习册" onClick={() => onNavigate('distribution')} />
+            <QuickActionBtn icon={<GraduationCap />} label="管理我的课程" onClick={() => onNavigate('courses')} />
+            <QuickActionBtn icon={<Users />} label="查看学生学情" onClick={() => onNavigate('students')} />
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity & Course Progress */}
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">课程教学进度</h3>
+            <button onClick={() => onNavigate('courses')} className="text-sm text-blue-500 hover:underline cursor-pointer">全部课程 →</button>
+          </div>
+          <div className="space-y-4">
+            {courseList.filter(c => c.status === 'active').map(course => (
+              <div key={course.id} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer" onClick={() => onNavigate('courses')}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-slate-800">{course.name}</span>
+                  <span className="text-xs text-blue-600 font-semibold">{course.progress}%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${course.progress}%` }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">最近动态</h3>
+          </div>
+          <div className="space-y-3">
+            {notifications.slice(0, 4).map(n => (
+              <div key={n.id} className="flex items-start space-x-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer" onClick={() => {
+                if (n.type === 'warning') onNavigate('analytics');
+                else if (n.title === '待批阅提醒') onNavigate('distribution');
+                else if (n.title === 'AI课件生成完成') onNavigate('preparation');
+              }}>
+                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${n.type === 'warning' ? 'bg-orange-500' : n.type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-700">{n.title}</p>
+                  <p className="text-xs text-slate-400">{n.desc} · {n.time}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -284,79 +765,79 @@ function DashboardView({ onNavigate }) {
   );
 }
 
-function KnowledgeBaseView() {
+function KnowledgeBaseView({ onSelectResource }) {
+  const [activeFilter, setActiveFilter] = useState('全部资源');
+  const [searchText, setSearchText] = useState('');
+
+  const filters = ['全部资源', '专业教材语料', '行业真实案例', '视频/多媒体', '智能题库'];
+  
+  const filteredResources = resourceLibrary.filter(item => {
+    if (activeFilter === '全部资源') return true;
+    if (activeFilter === '专业教材语料') return item.type === 'doc' || item.tags.some(t => t.includes('教材') || t.includes('SOP'));
+    if (activeFilter === '行业真实案例') return item.type === 'case';
+    if (activeFilter === '视频/多媒体') return item.type === 'video';
+    if (activeFilter === '智能题库') return item.type === 'quiz';
+    return true;
+  });
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">专业教学知识库</h2>
-          <p className="text-sm text-slate-500 mt-1">结构化教学资源与真实行业案例库</p>
+          <p className="text-sm text-slate-500 mt-1">结构化教学资源与真实行业案例库 · 共 {resourceLibrary.length} 份资源</p>
         </div>
         <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center cursor-pointer">
-          <Plus /> <span className="ml-2">上传资源</span>
+          <Plus className="w-4 h-4 mr-2" /> 上传资源
         </button>
       </div>
 
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-2">
         <div className="flex items-center space-x-4 mb-4">
           <div className="flex-1 relative">
-            <div className="absolute left-3 top-2.5 text-slate-400"><Search /></div>
-            <input type="text" placeholder="基于RAG搜索知识点、案例、题目..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <Search className="w-5 h-5 absolute left-3 text-slate-400" style={{top: '10px'}} />
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} type="text" placeholder="基于RAG搜索知识点、案例、题目..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 cursor-pointer">
             全库检索
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-sm font-medium cursor-pointer border border-blue-100">全部资源</span>
-          <span className="px-4 py-1.5 bg-white text-slate-600 rounded-full text-sm cursor-pointer border border-slate-200 hover:bg-slate-50">专业教材语料</span>
-          <span className="px-4 py-1.5 bg-white text-slate-600 rounded-full text-sm cursor-pointer border border-slate-200 hover:bg-slate-50">行业真实案例</span>
-          <span className="px-4 py-1.5 bg-white text-slate-600 rounded-full text-sm cursor-pointer border border-slate-200 hover:bg-slate-50">视频/多媒体</span>
-          <span className="px-4 py-1.5 bg-white text-slate-600 rounded-full text-sm cursor-pointer border border-slate-200 hover:bg-slate-50">智能题库</span>
+        <div className="flex flex-wrap space-x-2">
+          {filters.map(filter => (
+            <span key={filter} onClick={() => setActiveFilter(filter)} className={`px-4 py-1.5 rounded-full text-sm cursor-pointer border transition-colors ${activeFilter === filter ? 'bg-blue-50 text-blue-600 font-medium border-blue-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{filter}</span>
+          ))}
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-3 gap-6">
-          {resourceLibrary.map(item => (
-            <div key={item.id} className="bg-white p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col h-40">
-              <div className="flex items-start mb-auto">
-                <div className="p-2 bg-slate-50 rounded-lg mr-3">
-                  {item.type === 'case' && <FileText />}
-                  {item.type === 'video' && <Video />}
-                  {item.type === 'quiz' && <MessageSquare />}
+        <div className="grid grid-cols-3 gap-5">
+          {filteredResources.map(item => (
+            <div key={item.id} onClick={() => onSelectResource(item)} className="bg-white p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col">
+              <div className="flex items-start mb-3">
+                <div className="p-2.5 bg-slate-50 rounded-lg mr-3">
+                  {item.type === 'case' && <FileText className="w-6 h-6 text-orange-500" />}
+                  {item.type === 'video' && <Video className="w-6 h-6 text-blue-500" />}
+                  {item.type === 'quiz' && <MessageSquare className="w-6 h-6 text-green-500" />}
+                  {item.type === 'doc' && <BookOpen className="w-6 h-6 text-purple-500" />}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-semibold text-slate-800 line-clamp-2 leading-tight">{item.title}</h4>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {item.tags.map(tag => (
-                  <span key={tag} className="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-500 text-xs rounded-md">{tag}</span>
-                ))}
+              <p className="text-xs text-slate-400 line-clamp-2 mb-3">{item.desc}</p>
+              <div className="mt-auto flex items-center justify-between">
+                <div className="flex flex-wrap gap-1.5">
+                  {item.tags.slice(0, 2).map(tag => (
+                    <span key={tag} className="px-2 py-0.5 bg-slate-50 border border-slate-100 text-slate-500 text-[10px] rounded">{tag}</span>
+                  ))}
+                </div>
+                <div className="flex items-center space-x-2 text-[10px] text-slate-400">
+                  <span className="flex items-center"><Star className="w-3 h-3 text-yellow-500 mr-0.5" />{item.rating}</span>
+                  <span className="flex items-center"><Download className="w-3 h-3 mr-0.5" />{item.downloads}</span>
+                </div>
               </div>
             </div>
           ))}
-          <div className="bg-white p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col h-40">
-            <div className="flex items-start mb-auto">
-              <div className="p-2 bg-slate-50 rounded-lg mr-3"><BookOpen /></div>
-              <div><h4 className="font-semibold text-slate-800 line-clamp-2 leading-tight">前厅接待服务标准操作流程(SOP)</h4></div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-500 text-xs rounded-md">前厅管理</span>
-              <span className="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-500 text-xs rounded-md">教材语料</span>
-            </div>
-          </div>
-          <div className="bg-white p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col h-40">
-            <div className="flex items-start mb-auto">
-              <div className="p-2 bg-slate-50 rounded-lg mr-3"><MessageSquare /></div>
-              <div><h4 className="font-semibold text-slate-800 line-clamp-2 leading-tight">跨文化沟通情景题库(含AI评分规则)</h4></div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-500 text-xs rounded-md">情景题</span>
-              <span className="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-500 text-xs rounded-md">高难度</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -366,13 +847,11 @@ function KnowledgeBaseView() {
 function PreparationView() {
   const [prompt, setPrompt] = useState('');
   const [genState, setGenState] = useState('idle');
-
+  
   const handleGenerate = () => {
     if (!prompt) return;
     setGenState('generating');
-    setTimeout(() => {
-      setGenState('done');
-    }, 2500);
+    setTimeout(() => { setGenState('done'); }, 2500);
   };
 
   return (
@@ -380,35 +859,37 @@ function PreparationView() {
       <div className="flex justify-between items-center mb-2">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">AI课件生成中心</h2>
-          <p className="text-sm text-slate-500 mt-1">输入核心知识点,AI一键调度知识库,生成结构化、活页式上课课件</p>
+          <p className="text-sm text-slate-500 mt-1">输入核心知识点，AI一键调度知识库，生成结构化、活页式上课课件</p>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-base font-semibold mb-4 flex items-center">
-          <Wand2 /> <span className="ml-2">课件生成提示词</span>
+          <Wand2 className="w-5 h-5 mr-2 text-purple-600" />
+          课件生成提示词
         </h3>
-        <textarea
+        <textarea 
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="请输入本节课的核心知识点或教学目标,例如:生成一份关于「酒店前台客诉处理技巧」的课件,需要包含真实安抚案例、角色扮演互动环节和随堂测验..."
+          placeholder="请输入本节课的核心知识点或教学目标，例如：生成一份关于「酒店前台客诉处理技巧」的课件，需要包含真实安抚案例、角色扮演互动环节和随堂测验..."
           className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-none"
         ></textarea>
-
+        
         <div className="flex justify-between items-center mt-4">
           <div className="flex gap-2 flex-wrap">
-            <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200" onClick={() => setPrompt('生成一份关于「酒店客房清扫标准操作流程」的活页课件')}>💡 示例:客房清扫SOP</span>
-            <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200" onClick={() => setPrompt('讲解「超售情况下的VIP客人安抚」,需重点突出跨部门协作的真实案例')}>💡 示例:超售客诉处理</span>
+            <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200" onClick={() => setPrompt('生成一份关于「酒店客房清扫标准操作流程」的活页课件')}>💡 示例：客房清扫SOP</span>
+            <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200" onClick={() => setPrompt('讲解「超售情况下的VIP客人安抚」，需重点突出跨部门协作的真实案例')}>💡 示例：超售客诉处理</span>
+            <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full cursor-pointer hover:bg-slate-200" onClick={() => setPrompt('设计一节「餐饮摆台规范」实操课程，含视频教学和AI模拟考核环节')}>💡 示例：餐饮摆台实操</span>
           </div>
-          <button
+          <button 
             onClick={handleGenerate}
             disabled={genState === 'generating' || !prompt}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all ${(!prompt || genState === 'generating') ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-purple-600 text-white hover:bg-purple-700 cursor-pointer'}`}
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all ${genState === 'generating' ? 'bg-purple-400 text-white cursor-not-allowed' : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md cursor-pointer'}`}
           >
             {genState === 'generating' ? (
-              <><span className="animate-spin mr-2"><Loader2 /></span> 正在根据知识库生成...</>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 正在根据知识库生成...</>
             ) : (
-              <><Sparkles /> <span className="ml-2">智能生成课件</span></>
+              <><Sparkles className="w-4 h-4 mr-2" /> 智能生成课件</>
             )}
           </button>
         </div>
@@ -417,58 +898,58 @@ function PreparationView() {
       {genState === 'done' && (
         <div className="animate-in">
           <div className="flex justify-between items-end mb-4">
-            <h3 className="text-lg font-semibold text-slate-800">生成结果:基于RAG知识库为您编排的活页内容</h3>
+            <h3 className="text-lg font-semibold text-slate-800">生成结果：基于RAG知识库为您编排的活页内容</h3>
             <div className="flex space-x-3">
               <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 cursor-pointer">导出为PPT</button>
               <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center cursor-pointer">
-                <CheckCircle2 /> <span className="ml-2">保存到我的课件</span>
+                <CheckCircle2 className="w-4 h-4 mr-2" /> 保存到我的课件
               </button>
             </div>
           </div>
-
+          
           <div className="space-y-4">
-            <div className="bg-white p-5 border-l-4 border-l-blue-500 border border-slate-200 rounded-xl shadow-sm group">
+            <div className="bg-white p-5 border-l-4 border-l-blue-500 border border-slate-200 rounded-xl shadow-sm group hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded mb-2 inline-block">模块一:情景导入</span>
-                  <h4 className="text-base font-bold text-slate-800">真实案例:愤怒的白金卡会员</h4>
-                  <p className="text-sm text-slate-600 mt-2">引入系统真实案例库内容《超售情况下的VIP客人安抚策略》,通过一段2分钟的动画视频展示客人到达酒店发现无房时的冲突场景。</p>
+                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded mb-2 inline-block">模块一：情景导入</span>
+                  <h4 className="text-base font-bold text-slate-800">真实案例：愤怒的白金卡会员</h4>
+                  <p className="text-sm text-slate-600 mt-2">引入系统真实案例库内容《超售情况下的VIP客人安抚策略》，通过一段2分钟的动画视频展示客人到达酒店发现无房时的冲突场景。</p>
                 </div>
-                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><FileText /></button>
+                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><Eye className="w-4 h-4" /></button>
               </div>
             </div>
 
-            <div className="bg-white p-5 border-l-4 border-l-purple-500 border border-slate-200 rounded-xl shadow-sm group">
+            <div className="bg-white p-5 border-l-4 border-l-purple-500 border border-slate-200 rounded-xl shadow-sm group hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded mb-2 inline-block">模块二:理论讲解与规范</span>
+                  <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded mb-2 inline-block">模块二：理论讲解与规范</span>
                   <h4 className="text-base font-bold text-slate-800">客诉处理L.E.A.R.N原则</h4>
-                  <p className="text-sm text-slate-600 mt-2">基于专业教材语料提炼。结构化讲解:Listen(倾听)、Empathize(同理)、Apologize(道歉)、React(反应)、Notify(告知)。</p>
+                  <p className="text-sm text-slate-600 mt-2">基于专业教材语料提炼。结构化讲解：Listen(倾听)、Empathize(同理)、Apologize(道歉)、React(反应)、Notify(告知)。</p>
                 </div>
-                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><FileText /></button>
+                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><Eye className="w-4 h-4" /></button>
               </div>
             </div>
 
-            <div className="bg-white p-5 border-l-4 border-l-orange-500 border border-slate-200 rounded-xl shadow-sm group relative overflow-hidden">
+            <div className="bg-white p-5 border-l-4 border-l-orange-500 border border-slate-200 rounded-xl shadow-sm group relative overflow-hidden hover:shadow-md transition-all">
               <div className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1 rounded-bl-lg">AI特色训练</div>
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded mb-2 inline-block">模块三:AI角色扮演互动</span>
-                  <h4 className="text-base font-bold text-slate-800">实操训练:扮演前台主管安抚客人</h4>
-                  <p className="text-sm text-slate-600 mt-2">调用AI虚拟角色体系,学生扫码在手机端扮演前台主管,与设定为"情绪激动、要求升房"的AI客人进行3分钟语音交互对话。系统根据安抚话术自动生成评分。</p>
+                  <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded mb-2 inline-block">模块三：AI角色扮演互动</span>
+                  <h4 className="text-base font-bold text-slate-800">实操训练：扮演前台主管安抚客人</h4>
+                  <p className="text-sm text-slate-600 mt-2">调用AI虚拟角色体系，学生扫码在手机端扮演前台主管，与设定为"情绪激动、要求升房"的AI客人进行3分钟语音交互对话。系统根据安抚话术自动生成评分。</p>
                 </div>
-                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><FileText /></button>
+                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><Eye className="w-4 h-4" /></button>
               </div>
             </div>
-
-            <div className="bg-white p-5 border-l-4 border-l-green-500 border border-slate-200 rounded-xl shadow-sm group">
+            
+            <div className="bg-white p-5 border-l-4 border-l-green-500 border border-slate-200 rounded-xl shadow-sm group hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded mb-2 inline-block">模块四:随堂评估</span>
+                  <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded mb-2 inline-block">模块四：随堂评估</span>
                   <h4 className="text-base font-bold text-slate-800">客诉权限与赔偿标准测验</h4>
-                  <p className="text-sm text-slate-600 mt-2">自动抽取题库中10道单选题,覆盖房费减免权限、代金券发放标准等核心考点。</p>
+                  <p className="text-sm text-slate-600 mt-2">自动抽取题库中10道单选题，覆盖房费减免权限、代金券发放标准等核心考点。</p>
                 </div>
-                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><FileText /></button>
+                <button className="text-slate-400 hover:text-blue-600 p-2 cursor-pointer"><Eye className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
@@ -484,17 +965,23 @@ function DistributionView() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-slate-800">任务分发引擎</h2>
-
+      
       <div className="flex items-center justify-between mb-8 relative">
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-200 -z-10"></div>
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 -z-10 transition-all" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
-
-        {[1, 2, 3].map(s => (
-          <div key={s} className="flex flex-col items-center bg-slate-50 px-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-2 ${step >= s ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>{s}</div>
-            <span className="text-sm font-medium">{s === 1 ? '选择任务内容' : s === 2 ? '分发对象配置' : '防作弊与规则设置'}</span>
-          </div>
-        ))}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 -z-10 transition-all" style={{ width: step === 1 ? '10%' : step === 2 ? '50%' : '100%' }}></div>
+        
+        <div className={`flex flex-col items-center bg-slate-50 px-2 ${step >= 1 ? 'text-blue-600' : 'text-slate-400'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-2 ${step >= 1 ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-slate-200'}`}>1</div>
+          <span className="text-sm font-medium">选择任务内容</span>
+        </div>
+        <div className={`flex flex-col items-center bg-slate-50 px-2 ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-2 ${step >= 2 ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-slate-200'}`}>2</div>
+          <span className="text-sm font-medium">分发对象配置</span>
+        </div>
+        <div className={`flex flex-col items-center bg-slate-50 px-2 ${step >= 3 ? 'text-blue-600' : 'text-slate-400'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-2 ${step >= 3 ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-slate-200'}`}>3</div>
+          <span className="text-sm font-medium">防作弊与规则设置</span>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -503,20 +990,27 @@ function DistributionView() {
             <h3 className="text-lg font-semibold border-l-4 border-blue-600 pl-3">选择要分发的练习或测试</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="border-2 border-blue-500 bg-blue-50 p-4 rounded-xl cursor-pointer relative">
-                <div className="absolute top-4 right-4 text-blue-600"><CheckCircle2 /></div>
+                <CheckCircle2 className="absolute top-4 right-4 text-blue-600" />
                 <h4 className="font-bold text-slate-800">客诉处理专项强化练习</h4>
-                <p className="text-sm text-slate-500 mt-2">包含:10道客观题,2道情景大题,1次AI角色扮演</p>
+                <p className="text-sm text-slate-500 mt-2">包含：10道客观题，2道情景大题，1次AI角色扮演</p>
                 <div className="mt-3 flex gap-2">
                   <span className="text-[10px] bg-white border border-blue-200 text-blue-600 px-2 py-1 rounded">AI自动判卷</span>
                 </div>
               </div>
               <div className="border border-slate-200 hover:border-blue-300 p-4 rounded-xl cursor-pointer">
                 <h4 className="font-bold text-slate-800">第三章 随堂测验</h4>
-                <p className="text-sm text-slate-500 mt-2">包含:20道客观题</p>
+                <p className="text-sm text-slate-500 mt-2">包含：20道客观题</p>
+              </div>
+              <div className="border border-slate-200 hover:border-blue-300 p-4 rounded-xl cursor-pointer">
+                <h4 className="font-bold text-slate-800">餐饮摆台实操模拟</h4>
+                <p className="text-sm text-slate-500 mt-2">包含：1次AI角色扮演 + 5道评估题</p>
+              </div>
+              <div className="border border-slate-200 hover:border-blue-300 p-4 rounded-xl cursor-pointer flex items-center justify-center text-slate-400">
+                <Plus className="w-5 h-5 mr-2" /> 从知识库选题组卷
               </div>
             </div>
             <div className="flex justify-end pt-6 border-t border-slate-100">
-              <button onClick={() => setStep(2)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 cursor-pointer">下一步:选择班级</button>
+              <button onClick={() => setStep(2)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 cursor-pointer">下一步：选择班级</button>
             </div>
           </div>
         )}
@@ -535,19 +1029,24 @@ function DistributionView() {
                 <span className="font-medium text-slate-800">24级酒店管理2班</span>
                 <span className="ml-auto text-sm text-slate-500">42人</span>
               </label>
-
+              <label className="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-gray-300 mr-3" />
+                <span className="font-medium text-slate-800">23级酒店管理1班</span>
+                <span className="ml-auto text-sm text-slate-500">40人</span>
+              </label>
+              
               <div className="bg-purple-50 p-4 rounded-lg flex items-start border border-purple-100 mt-4">
-                <div className="text-purple-600 mr-3 mt-0.5"><BrainCircuit /></div>
+                <BrainCircuit className="w-5 h-5 text-purple-600 mr-3 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-slate-800">AI 差异化分发建议</p>
-                  <p className="text-xs text-slate-600 mt-1">检测到 1 班有 8 名学生基础较弱,是否自动为他们附加基础概念解析卡片?</p>
+                  <p className="text-xs text-slate-600 mt-1">检测到 1 班有 8 名学生基础较弱，是否自动为他们附加基础概念解析卡片？</p>
                   <button className="mt-2 text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded hover:bg-purple-200 cursor-pointer">开启差异化推送</button>
                 </div>
               </div>
             </div>
             <div className="flex justify-between pt-6 border-t border-slate-100">
               <button onClick={() => setStep(1)} className="text-slate-600 px-6 py-2 rounded-lg font-medium hover:bg-slate-100 cursor-pointer">返回</button>
-              <button onClick={() => setStep(3)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 cursor-pointer">下一步:规则设置</button>
+              <button onClick={() => setStep(3)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 cursor-pointer">下一步：规则设置</button>
             </div>
           </div>
         )}
@@ -565,9 +1064,12 @@ function DistributionView() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">截止时间</label>
                   <input type="datetime-local" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">限时（分钟）</label>
+                  <input type="number" defaultValue={60} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+                </div>
               </div>
               <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <h4 className="text-sm font-bold text-slate-800 mb-3">考试控制/防作弊
                 <h4 className="text-sm font-bold text-slate-800 mb-3">考试控制/防作弊</h4>
                 <label className="flex items-center cursor-pointer">
                   <div className="relative">
@@ -586,7 +1088,7 @@ function DistributionView() {
                   <div className="ml-3 text-sm font-medium text-slate-700">题目顺序随机化</div>
                 </label>
                 <label className="flex items-center cursor-pointer opacity-50">
-                  <div className="relative">
+                   <div className="relative">
                     <input type="checkbox" className="sr-only" disabled />
                     <div className="block bg-slate-300 w-10 h-6 rounded-full"></div>
                     <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
@@ -598,7 +1100,7 @@ function DistributionView() {
             <div className="flex justify-between pt-6 border-t border-slate-100">
               <button onClick={() => setStep(2)} className="text-slate-600 px-6 py-2 rounded-lg font-medium hover:bg-slate-100 cursor-pointer">返回</button>
               <button className="bg-blue-600 flex items-center text-white px-8 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all cursor-pointer">
-                <Send /> <span className="ml-2">确认发布任务</span>
+                <Send className="w-4 h-4 mr-2" /> 确认发布任务
               </button>
             </div>
           </div>
@@ -608,7 +1110,7 @@ function DistributionView() {
   );
 }
 
-function AnalyticsView() {
+function AnalyticsView({ onNavigate }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -616,13 +1118,19 @@ function AnalyticsView() {
           <h2 className="text-2xl font-bold text-slate-800">全息学情分析</h2>
           <p className="text-slate-500 text-sm mt-1">24级酒店管理1班 - 学期中期洞察</p>
         </div>
-        <select className="border border-slate-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
-          <option>24级酒店管理1班</option>
-          <option>24级旅游管理2班</option>
-        </select>
+        <div className="flex items-center space-x-3">
+          <select className="border border-slate-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+            <option>24级酒店管理1班</option>
+            <option>24级旅游管理2班</option>
+          </select>
+          <button onClick={() => {}} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer flex items-center">
+            <Download className="w-4 h-4 mr-2" /> 导出报告
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-6">
+        {/* Knowledge Mastery Chart */}
         <div className="col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-semibold mb-4 text-slate-800">核心知识点掌握率雷达图</h3>
           <div className="h-72">
@@ -630,35 +1138,34 @@ function AnalyticsView() {
           </div>
         </div>
 
+        {/* AI Insight Panel */}
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-sm p-6 text-white flex flex-col">
           <div className="flex items-center mb-4 pb-4 border-b border-white/20">
-            <BrainCircuit />
-            <h3 className="text-lg font-bold ml-2">AI 学情智能诊断</h3>
+            <BrainCircuit className="w-6 h-6 mr-2" />
+            <h3 className="text-lg font-bold">AI 学情智能诊断</h3>
           </div>
           <div className="flex-1 space-y-4">
             <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <h4 className="text-sm font-semibold flex items-center text-red-200 mb-1">
-                <AlertCircle /> <span className="ml-1">薄弱项预警</span>
-              </h4>
-              <p className="text-sm text-indigo-50 leading-relaxed">该班级在<strong className="text-white">【客诉突发处理】</strong>模块平均得分为 62分,低于专业达标线(75分)。主要失分点集中在:情绪安抚话术、赔偿权限界定。</p>
+              <h4 className="text-sm font-semibold flex items-center text-red-200 mb-1"><AlertCircle className="w-4 h-4 mr-1" /> 薄弱项预警</h4>
+              <p className="text-sm text-indigo-50 leading-relaxed">该班级在<strong className="text-white">【客诉突发处理】</strong>模块平均得分为 62分，低于专业达标线(75分)。主要失分点集中在：情绪安抚话术、赔偿权限界定。</p>
             </div>
             <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <h4 className="text-sm font-semibold flex items-center text-green-200 mb-1">
-                <User /> <span className="ml-1">重点关注名单</span>
-              </h4>
+              <h4 className="text-sm font-semibold flex items-center text-green-200 mb-1"><User className="w-4 h-4 mr-1" /> 重点关注名单</h4>
               <div className="flex flex-wrap gap-2 mt-2">
-                <span className="px-2 py-1 bg-white/20 rounded text-xs">张三 (连续两次不及格)</span>
-                <span className="px-2 py-1 bg-white/20 rounded text-xs">李四 (实操考核超时)</span>
-                <span className="px-2 py-1 bg-white/20 rounded text-xs">+ 3 人</span>
+                <span className="px-2 py-1 bg-white/20 rounded text-xs cursor-pointer hover:bg-white/30">张三 (连续两次不及格)</span>
+                <span className="px-2 py-1 bg-white/20 rounded text-xs cursor-pointer hover:bg-white/30">李四 (实操考核超时)</span>
+                <span className="px-2 py-1 bg-white/20 rounded text-xs cursor-pointer hover:bg-white/30">+ 3 人</span>
               </div>
             </div>
           </div>
-          <button className="mt-4 w-full bg-white text-purple-700 font-semibold py-2 rounded-lg hover:bg-indigo-50 transition-colors shadow-sm cursor-pointer">
-            生成详细诊断报告
-          </button>
+          <div className="flex space-x-2 mt-4">
+            <button onClick={() => onNavigate('distribution')} className="flex-1 bg-white text-purple-700 font-semibold py-2 rounded-lg hover:bg-indigo-50 transition-colors shadow-sm cursor-pointer text-sm">生成补救任务</button>
+            <button onClick={() => onNavigate('preparation')} className="flex-1 bg-white/20 text-white font-semibold py-2 rounded-lg hover:bg-white/30 transition-colors cursor-pointer text-sm">AI备课强化</button>
+          </div>
         </div>
       </div>
 
+      {/* Activity Bar Chart */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold text-slate-800">近七日学习活跃度与任务提交趋势</h3>
@@ -675,31 +1182,353 @@ function AnalyticsView() {
   );
 }
 
+// --- Course Management View ---
+function CourseManageView({ onSelectCourse }) {
+  const [view, setView] = useState('list');
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">课程管理</h2>
+          <p className="text-sm text-slate-500 mt-1">管理您的课程与教学计划</p>
+        </div>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center cursor-pointer">
+          <Plus className="w-4 h-4 mr-2" /> 新建课程
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        {courseList.map(course => (
+          <div key={course.id} onClick={() => onSelectCourse(course)} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-lg font-bold text-slate-800">{course.name}</h3>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${course.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                    {course.status === 'active' ? '进行中' : '已结课'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">{course.code}</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button className="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 cursor-pointer" onClick={(e) => { e.stopPropagation(); }}><Eye className="w-4 h-4" /></button>
+                <button className="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 cursor-pointer" onClick={(e) => { e.stopPropagation(); }}><Settings className="w-4 h-4" /></button>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 text-sm text-slate-500 mb-4">
+              <span className="flex items-center"><Users className="w-4 h-4 mr-1" />{course.students}人</span>
+              <span className="flex items-center"><GraduationCap className="w-4 h-4 mr-1" />{course.classes.length}个班级</span>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-xs text-slate-500">教学进度</span>
+                <span className="text-xs font-semibold text-blue-600">{course.progress}%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className={`h-2 rounded-full transition-all ${course.progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${course.progress}%` }}></div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mt-4">
+              {course.classes.map((cls, i) => (
+                <span key={i} className="text-[10px] bg-slate-50 border border-slate-200 text-slate-500 px-2 py-0.5 rounded">{cls}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Student Management View ---
+function StudentManageView({ onSelectStudent }) {
+  const [filterClass, setFilterClass] = useState('全部');
+  const [searchText, setSearchText] = useState('');
+
+  const classes = ['全部', '24级酒管1班', '24级酒管2班'];
+  const filtered = studentList.filter(s => {
+    if (filterClass !== '全部' && s.class !== filterClass) return false;
+    if (searchText && !s.name.includes(searchText) && !s.class.includes(searchText)) return false;
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">学生管理</h2>
+          <p className="text-sm text-slate-500 mt-1">查看学生信息与学情概况</p>
+        </div>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center cursor-pointer">
+          <Download className="w-4 h-4 mr-2" /> 导出名册
+        </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+        <div className="flex-1 relative">
+          <Search className="w-4 h-4 absolute left-3 text-slate-400" style={{top: '10px'}} />
+          <input value={searchText} onChange={e => setSearchText(e.target.value)} type="text" placeholder="搜索学生姓名..." className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div className="flex space-x-2">
+          {classes.map(cls => (
+            <button key={cls} onClick={() => setFilterClass(cls)} className={`px-4 py-2 rounded-lg text-sm cursor-pointer transition-colors ${filterClass === cls ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{cls}</button>
+          ))}
+        </div>
+        <button className="flex items-center px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm hover:bg-slate-200 cursor-pointer">
+          <Filter className="w-4 h-4 mr-2" /> 筛选
+        </button>
+      </div>
+
+      {/* Student Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="text-left text-xs font-semibold text-slate-500 py-3 px-6">学生</th>
+              <th className="text-left text-xs font-semibold text-slate-500 py-3 px-4">班级</th>
+              <th className="text-left text-xs font-semibold text-slate-500 py-3 px-4">平均分</th>
+              <th className="text-left text-xs font-semibold text-slate-500 py-3 px-4">趋势</th>
+              <th className="text-left text-xs font-semibold text-slate-500 py-3 px-4">状态</th>
+              <th className="text-left text-xs font-semibold text-slate-500 py-3 px-4">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(student => (
+              <tr key={student.id} className="border-t border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onSelectStudent(student)}>
+                <td className="py-3 px-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">{student.avatar}</div>
+                    <span className="font-medium text-slate-800">{student.name}</span>
+                  </div>
+                </td>
+                <td className="py-3 px-4 text-sm text-slate-600">{student.class}</td>
+                <td className="py-3 px-4">
+                  <span className={`text-sm font-semibold ${student.avgScore >= 80 ? 'text-green-600' : student.avgScore >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>{student.avgScore}</span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className={`text-sm ${student.trend === 'up' ? 'text-green-500' : student.trend === 'down' ? 'text-red-500' : 'text-slate-400'}`}>
+                    {student.trend === 'up' ? '↑ 上升' : student.trend === 'down' ? '↓ 下降' : '→ 稳定'}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  {student.risk ? (
+                    <span className="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-medium">预警</span>
+                  ) : (
+                    <span className="text-[10px] bg-green-50 text-green-600 border border-green-200 px-2 py-0.5 rounded-full font-medium">正常</span>
+                  )}
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center space-x-2">
+                    <button className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer" onClick={(e) => { e.stopPropagation(); onSelectStudent(student); }}>详情</button>
+                    <span className="text-slate-300">|</span>
+                    <button className="text-xs text-purple-600 hover:text-purple-700 cursor-pointer" onClick={(e) => { e.stopPropagation(); }}>补救方案</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// --- Settings View ---
+function SettingsView() {
+  const [activeSection, setActiveSection] = useState('profile');
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h2 className="text-2xl font-bold text-slate-800">系统设置</h2>
+
+      <div className="flex space-x-4">
+        {[
+          { key: 'profile', label: '个人信息' },
+          { key: 'notifications', label: '通知设置' },
+          { key: 'ai', label: 'AI参数配置' },
+          { key: 'security', label: '安全与隐私' },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => setActiveSection(tab.key)} className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${activeSection === tab.key ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{tab.label}</button>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+        {activeSection === 'profile' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-slate-800">个人信息</h3>
+            <div className="flex items-center space-x-6 mb-6">
+              <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">李</div>
+              <div>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">更换头像</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">姓名</label>
+                <input type="text" defaultValue="李教授" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">所属学院</label>
+                <input type="text" defaultValue="酒店管理学院" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">邮箱</label>
+                <input type="email" defaultValue="li.professor@hotel.edu.cn" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">联系电话</label>
+                <input type="tel" defaultValue="138****5678" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+            </div>
+            <div className="flex justify-end pt-4">
+              <button className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">保存修改</button>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'notifications' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-slate-800">通知设置</h3>
+            <div className="space-y-4">
+              {[
+                { label: '学情预警通知', desc: '当学生成绩低于达标线时推送通知', enabled: true },
+                { label: '任务完成通知', desc: '当学生完成分发任务时推送通知', enabled: true },
+                { label: 'AI生成完成通知', desc: '当AI课件或题目生成完成后推送通知', enabled: true },
+                { label: '系统更新通知', desc: '平台功能更新与维护通知', enabled: false },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{item.label}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                  </div>
+                  <div className="relative cursor-pointer">
+                    <div className={`block w-10 h-6 rounded-full ${item.enabled ? 'bg-blue-600' : 'bg-slate-300'}`}></div>
+                    <div className={`dot absolute top-1 bg-white w-4 h-4 rounded-full transition transform ${item.enabled ? 'translate-x-4 left-1' : 'left-1'}`}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'ai' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-slate-800">AI参数配置</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">AI模型选择</label>
+                <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                  <option>DeepSeek-V3 (推荐)</option>
+                  <option>GPT-4o</option>
+                  <option>Qwen-Max</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">创造力参数 (Temperature)</label>
+                <input type="range" min="0" max="100" defaultValue="70" className="w-full" />
+                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <span>精确 (0)</span>
+                  <span>创造 (100)</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">AI评分严格度</label>
+                <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                  <option>标准</option>
+                  <option>宽松</option>
+                  <option>严格</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">RAG知识库检索范围</label>
+                <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                  <option>全库检索</option>
+                  <option>仅当前课程</option>
+                  <option>仅教材语料</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-4">
+              <button className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">保存配置</button>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'security' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-slate-800">安全与隐私</h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">修改密码</p>
+                    <p className="text-xs text-slate-500 mt-0.5">上次修改时间：2026年4月15日</p>
+                  </div>
+                  <button className="px-4 py-1.5 border border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-100 cursor-pointer">修改</button>
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">两步验证</p>
+                    <p className="text-xs text-slate-500 mt-0.5">增强账户安全性</p>
+                  </div>
+                  <div className="relative cursor-pointer">
+                    <div className="block bg-slate-300 w-10 h-6 rounded-full"></div>
+                    <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">学生数据匿名化</p>
+                    <p className="text-xs text-slate-500 mt-0.5">在学情报告中匿名显示学生信息</p>
+                  </div>
+                  <div className="relative cursor-pointer">
+                    <div className="block bg-blue-600 w-10 h-6 rounded-full"></div>
+                    <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform translate-x-4"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Generic UI Components ---
 
 function NavItem({ icon, label, isActive, onClick }) {
   return (
-    <button
+    <button 
       onClick={onClick}
-      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer `}
+      className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${isActive ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
     >
       {icon}
       <span className="font-medium text-sm">{label}</span>
-      {isActive && <span className="ml-auto opacity-50"><ChevronRight /></span>}
+      {isActive && <ChevronRight className="ml-auto opacity-50" />}
     </button>
   );
 }
 
 function StatCard({ title, value, suffix, icon, color }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center">
-      <div className={`p-4 rounded-xl mr-4 `}>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center transition-all hover:shadow-md">
+      <div className={`p-4 rounded-xl mr-4 ${color}`}>
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-500">{title}</p>
-        <p className="text-2xl font-bold text-slate-800 mt-1">
-          {value} <span className="text-sm font-normal text-slate-500">{suffix}</span>
+        <p className="text-[13px] font-medium text-slate-400 tracking-wide">{title}</p>
+        <p className="text-2xl font-bold text-slate-800 mt-1 num-display">
+          {value} <span className="text-sm font-medium text-slate-400">{suffix}</span>
         </p>
       </div>
     </div>
@@ -713,7 +1542,7 @@ function QuickActionBtn({ icon, label, onClick }) {
         <span className="text-slate-400 group-hover:text-blue-500 mr-3">{icon}</span>
         <span className="font-medium text-sm">{label}</span>
       </div>
-      <span className="text-slate-300 group-hover:text-blue-500"><ChevronRight /></span>
+      <ChevronRight className="text-slate-300 group-hover:text-blue-500" />
     </button>
   );
 }
